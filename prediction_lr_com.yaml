@@ -1,0 +1,68 @@
+name: Predict lr
+inputs:
+- {name: project_id, type: String}
+- {name: model_repo, type: String}
+- {name: features, type: typing.Dict}
+outputs:
+- {name: Output, type: typing.Dict}
+implementation:
+  container:
+    image: python:3.7
+    command:
+    - sh
+    - -c
+    - (PIP_DISABLE_PIP_VERSION_CHECK=1 python3 -m pip install --quiet --no-warn-script-location
+      'google-cloud-storage' 'pandas' 'sklearn' || PIP_DISABLE_PIP_VERSION_CHECK=1
+      python3 -m pip install --quiet --no-warn-script-location 'google-cloud-storage'
+      'pandas' 'sklearn' --user) && "$0" "$@"
+    - sh
+    - -ec
+    - |
+      program_path=$(mktemp)
+      printf "%s" "$0" > "$program_path"
+      python3 -u "$program_path" "$@"
+    - "def predict_lr(project_id, model_repo, features):\n    import pandas as pd\n\
+      \    from google.cloud import storage\n    from sklearn.preprocessing import\
+      \ PowerTransformer\n    import pickle \n    import json\n    import logging\n\
+      \    import sys\n    import os\n\n    logging.basicConfig(stream=sys.stdout,\
+      \ level=logging.INFO)\n\n    df = pd.DataFrame.from_dict(features)    \n\n \
+      \   client = storage.Client(project=project_id)\n    bucket = client.get_bucket(model_repo)\n\
+      \    blob = bucket.blob('model.pkl')\n    filename = '/tmp/local_model.pkl'\n\
+      \    blob.download_to_filename(filename)\n    blob_t = bucket.blob('transformer.pkl')\n\
+      \    filename_t = '/tmp/transformer.pkl'\n    blob_t.download_to_filename(filename_t)\n\
+      \n    #Loading the saved model with joblib\n    model = pickle.load(open(filename,\
+      \ 'rb'))\n    transformer = pickle.load(open(filename_t, 'rb'))\n\n    X = df.drop(['BodyFat',\
+      \ 'Density'], axis=1)\n\n    X['Bmi'] = 703 * X['Weight'] / (X['Height'] * X['Height'])\n\
+      \    X['ACratio'] = X['Abdomen'] / X['Chest']\n    X['HTratio'] = X['Hip'] /\
+      \ X['Thigh']\n    X.drop(['Weight', 'Height', 'Abdomen', 'Chest', 'Hip', 'Thigh'],\
+      \ axis=1, inplace=True)\n\n    #Transformer\n    trans = PowerTransformer()\n\
+      \    X = trans.fit_transform(X)    \n\n    dfcp = df.copy()   \n    y_classes\
+      \ = model.predict(X)\n    logging.info(y_classes)\n    dfcp['pclass'] = y_classes.tolist()\n\
+      \    dic = dfcp.to_dict(orient='records') \n    return dic\n\ndef _serialize_json(obj)\
+      \ -> str:\n    if isinstance(obj, str):\n        return obj\n    import json\n\
+      \n    def default_serializer(obj):\n        if hasattr(obj, 'to_struct'):\n\
+      \            return obj.to_struct()\n        else:\n            raise TypeError(\n\
+      \                \"Object of type '%s' is not JSON serializable and does not\
+      \ have .to_struct() method.\"\n                % obj.__class__.__name__)\n\n\
+      \    return json.dumps(obj, default=default_serializer, sort_keys=True)\n\n\
+      import json\nimport argparse\n_parser = argparse.ArgumentParser(prog='Predict\
+      \ lr', description='')\n_parser.add_argument(\"--project-id\", dest=\"project_id\"\
+      , type=str, required=True, default=argparse.SUPPRESS)\n_parser.add_argument(\"\
+      --model-repo\", dest=\"model_repo\", type=str, required=True, default=argparse.SUPPRESS)\n\
+      _parser.add_argument(\"--features\", dest=\"features\", type=json.loads, required=True,\
+      \ default=argparse.SUPPRESS)\n_parser.add_argument(\"----output-paths\", dest=\"\
+      _output_paths\", type=str, nargs=1)\n_parsed_args = vars(_parser.parse_args())\n\
+      _output_files = _parsed_args.pop(\"_output_paths\", [])\n\n_outputs = predict_lr(**_parsed_args)\n\
+      \n_outputs = [_outputs]\n\n_output_serializers = [\n    _serialize_json,\n\n\
+      ]\n\nimport os\nfor idx, output_file in enumerate(_output_files):\n    try:\n\
+      \        os.makedirs(os.path.dirname(output_file))\n    except OSError:\n  \
+      \      pass\n    with open(output_file, 'w') as f:\n        f.write(_output_serializers[idx](_outputs[idx]))\n"
+    args:
+    - --project-id
+    - {inputValue: project_id}
+    - --model-repo
+    - {inputValue: model_repo}
+    - --features
+    - {inputValue: features}
+    - '----output-paths'
+    - {outputPath: Output}
