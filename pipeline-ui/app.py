@@ -56,7 +56,7 @@ def check_bodyfat():
 
         # Transformer
         X = transformer.transform(X)
-        density = model.predict(df_t)
+        density = model.predict(X)
         fat = ((4.95 / density[0]) - 4.5) * 100
         return {'Density': density[0], 'Bodyfat': fat}
     return render_template(
