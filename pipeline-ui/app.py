@@ -47,7 +47,7 @@ def check_bodyfat():
         model = pickle.load(open(filename, 'rb'))
         transformer = pickle.load(open(filename_t, 'rb'))
 
-        X = pd.DataFrame.from_dict(prediction_input[0])
+        X = pd.DataFrame.from_dict(prediction_input)
 
         X['Bmi'] = 703 * X['Weight'] / (X['Height'] * X['Height'])
         X['ACratio'] = X['Abdomen'] / X['Chest']
