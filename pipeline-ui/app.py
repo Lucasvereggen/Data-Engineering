@@ -2,6 +2,7 @@
 import json
 import os
 import pandas as pd
+import pickle
 from google.cloud import storage
 from flask import Flask, request, render_template
 
