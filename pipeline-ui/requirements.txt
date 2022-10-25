@@ -4,3 +4,4 @@ keras
 tensorflow
 requests
 sklearn
+google.cloud.storage

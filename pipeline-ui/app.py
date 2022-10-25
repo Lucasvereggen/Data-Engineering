@@ -35,7 +35,7 @@ def check_bodyfat():
         # Importing model from the pipeline bucket
         storage_client = storage.Client(project='de2022-362617')
 
-        bucket = storage_client.bucket('bodyfat-model')
+        bucket = storage_client.bucket('bodyfat_model')
         blob = bucket.blob('model.pkl')
         filename = '/tmp/local_model.pkl'
         blob.download_to_filename(filename)
