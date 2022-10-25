@@ -1,8 +1,8 @@
 # importing Flask and other modules
 import json
 import os
-
-import requests
+import pandas as pd
+from google.cloud import storage
 from flask import Flask, request, render_template
 
 # Flask constructor
@@ -32,13 +32,32 @@ def check_bodyfat():
             }
         ]
         print(prediction_input)
-        # use requests library to execute the prediction service API by sending a HTTP POST request
-        # localhost or 127.0.0.1 is used when the applications are on the same machine.
-        predictor_api_url = os.environ['PREDICTOR_API']
-        res = requests.post(predictor_api_url, json=json.loads(json.dumps(prediction_input)))
-        print(res.status_code)
-        result = res.json()
-        return result
+        # Importing model from the pipeline bucket
+        storage_client = storage.Client(project='de2022-362617')
+
+        bucket = storage_client.bucket('bodyfat-model')
+        blob = bucket.blob('model.pkl')
+        filename = '/tmp/local_model.pkl'
+        blob.download_to_filename(filename)
+        blob_t = bucket.blob('transformer.pkl')
+        filename_t = '/tmp/transformer.pkl'
+        blob_t.download_to_filename(filename_t)
+
+        model = pickle.load(open(filename, 'rb'))
+        transformer = pickle.load(open(filename_t, 'rb'))
+
+        X = pd.from_dict(prediction_input[0])
+
+        X['Bmi'] = 703 * X['Weight'] / (X['Height'] * X['Height'])
+        X['ACratio'] = X['Abdomen'] / X['Chest']
+        X['HTratio'] = X['Hip'] / X['Thigh']
+        X.drop(['Weight', 'Height', 'Abdomen', 'Chest', 'Hip', 'Thigh'], axis=1, inplace=True)
+
+        # Transformer
+        X = transformer.transform(X)
+        density = model.predict(df_t)
+        fat = ((4.95 / density[0]) - 4.5) * 100
+        return {'Density': density[0], 'Bodyfat': fat}
     return render_template(
         "user_form.html")  # this method is called of HTTP method is GET, e.g., when browsing the link
 
