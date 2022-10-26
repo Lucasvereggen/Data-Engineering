@@ -38,13 +38,16 @@ implementation:
       \ axis=1, inplace=True)\n\n    #Transformer\n    X = transformer.transform(X)\
       \    \n\n    dfcp = df.copy()   \n    y_classes = model.predict(X)\n    logging.info(y_classes)\n\
       \    dfcp['pclass'] = y_classes.tolist()\n    dic = dfcp.to_dict(orient='records')\
-      \ \n    return dic\n\ndef _serialize_json(obj) -> str:\n    if isinstance(obj,\
-      \ str):\n        return obj\n    import json\n\n    def default_serializer(obj):\n\
-      \        if hasattr(obj, 'to_struct'):\n            return obj.to_struct()\n\
-      \        else:\n            raise TypeError(\n                \"Object of type\
-      \ '%s' is not JSON serializable and does not have .to_struct() method.\"\n \
-      \               % obj.__class__.__name__)\n\n    return json.dumps(obj, default=default_serializer,\
-      \ sort_keys=True)\n\nimport json\nimport argparse\n_parser = argparse.ArgumentParser(prog='Predict\
+      \ \n\n    #Export best model for ui prediction\n    local_file = '/tmp/local_best_model.pkl'\n\
+      \    pickle.dump(model, open(local_file, 'wb'))\n    blob = bucket.blob('best_model.pkl')\n\
+      \    blob.upload_from_filename(local_file)\n    return dic\n\ndef _serialize_json(obj)\
+      \ -> str:\n    if isinstance(obj, str):\n        return obj\n    import json\n\
+      \n    def default_serializer(obj):\n        if hasattr(obj, 'to_struct'):\n\
+      \            return obj.to_struct()\n        else:\n            raise TypeError(\n\
+      \                \"Object of type '%s' is not JSON serializable and does not\
+      \ have .to_struct() method.\"\n                % obj.__class__.__name__)\n\n\
+      \    return json.dumps(obj, default=default_serializer, sort_keys=True)\n\n\
+      import json\nimport argparse\n_parser = argparse.ArgumentParser(prog='Predict\
       \ ridge', description='')\n_parser.add_argument(\"--project-id\", dest=\"project_id\"\
       , type=str, required=True, default=argparse.SUPPRESS)\n_parser.add_argument(\"\
       --model-repo\", dest=\"model_repo\", type=str, required=True, default=argparse.SUPPRESS)\n\
