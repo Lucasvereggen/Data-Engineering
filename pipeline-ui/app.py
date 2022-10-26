@@ -37,8 +37,8 @@ def check_bodyfat():
         storage_client = storage.Client(project='de2022-362617')
 
         bucket = storage_client.bucket('bodyfat_model')
-        blob = bucket.blob('model.pkl')
-        filename = '/tmp/local_model.pkl'
+        blob = bucket.blob('best_model.pkl')
+        filename = '/tmp/local_best_model.pkl'
         blob.download_to_filename(filename)
         blob_t = bucket.blob('transformer.pkl')
         filename_t = '/tmp/transformer.pkl'
@@ -58,7 +58,8 @@ def check_bodyfat():
         X = transformer.transform(X)
         density = model.predict(X)
         fat = ((4.95 / density[0]) - 4.5) * 100
-        return {'Used model': model, 'Density': density[0], 'Bodyfat': fat}
+        model_type = type(model)
+        return {'Used model': model_type, 'Density': density[0], 'Bodyfat': fat}
     return render_template(
         "user_form.html")  # this method is called of HTTP method is GET, e.g., when browsing the link
 
