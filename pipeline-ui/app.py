@@ -58,8 +58,7 @@ def check_bodyfat():
         X = transformer.transform(X)
         density = model.predict(X)
         fat = ((4.95 / density[0]) - 4.5) * 100
-        model_type = type(model)
-        return {'Used model': model_type, 'Density': density[0], 'Bodyfat': fat}
+        return {'Density': density[0], 'Bodyfat': fat}
     return render_template(
         "user_form.html")  # this method is called of HTTP method is GET, e.g., when browsing the link
 
